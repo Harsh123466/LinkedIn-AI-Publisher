@@ -1,0 +1,8 @@
+langchain
+langgraph
+langchain-groq  
+python-dotenv
+
+langchain-community
+langchain-text-splitters
+pypdf

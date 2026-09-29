@@ -1,0 +1,6 @@
+.env
+venv
+_pycache_
+config
+mcp_client
+mcp_server
