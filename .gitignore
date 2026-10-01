@@ -1,6 +1,4 @@
 .env
 venv
-_pycache_
+__pycache__
 config
-mcp_client
-mcp_server

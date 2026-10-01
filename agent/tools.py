@@ -7,4 +7,4 @@ load_dotenv()
 
 search_tool = TavilySearch(max_results = 3)
 
-tools = [search_tool]
+tool = [search_tool]

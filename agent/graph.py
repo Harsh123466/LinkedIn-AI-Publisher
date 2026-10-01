@@ -2,35 +2,32 @@ import os
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import ToolNode
-from typing import TypedDict, Annotated
-from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START, END
 from dotenv import load_dotenv
 import time
 from langchain_core.messages import ToolMessage
-from tools import tools
-from prompt import WRITER_SYSTEM_PROMPT, REVIEWER_SYSTEM_PROMPT
-from state import State
+from agent.tools import tool
+from agent.prompt import WRITER_SYSTEM_PROMPT, REVIEWER_SYSTEM_PROMPT
+from agent.state import State
 
 
 load_dotenv()
 
 
-
 # llms
 
 # for write
-writer_llm = ChatGoogleGenerativeAI(
-    model="gemini-3-flash-preview",
-    temperature=0.7
-)
-
-# writer_llm = ChatGroq(
-#     model="qwen/qwen3.8-27b",
+# writer_llm = ChatGoogleGenerativeAI(
+#     model="gemini-3-flash-preview",
 #     temperature=0.7
 # )
 
-writer_llm_with_tools = writer_llm.bind_tools(tools)
+writer_llm = ChatGroq(
+    model="qwen/qwen3.8-27b",
+    temperature=0.7
+)
+
+writer_llm_with_tools = writer_llm.bind_tools(tool)
 
 # for reviewer
 reviewer_llm = ChatGroq(
@@ -62,7 +59,7 @@ def writer_node(state: State) -> dict:
         )
 
         print(f"Writer took {time.time() - start:.2f} seconds")
-        print("TOOL CALLS:", response.tool_calls)
+        # print("TOOL CALLS:", response.tool_calls)
 
         return {
             "messages": [response]
@@ -94,7 +91,7 @@ def writer_node(state: State) -> dict:
     )
 
     print(f"Writer took {time.time() - start:.2f} seconds")
-    print("TOOL CALLS:", response.tool_calls)
+    # print("TOOL CALLS:", response.tool_calls)
 
     return {
         "messages": [
@@ -105,13 +102,13 @@ def writer_node(state: State) -> dict:
     }
 
 
-tool_node = ToolNode(tools)
+tool_node = ToolNode(tool)
 
 
 def extract_draft_node(state : State) -> dict:
     """After the writer finishes tool calls, pulls the final text out as the draft."""
     last_message = state['messages'][-1]
-    draft = last_message.content[0]["text"]
+    draft = last_message.content
     print(f"\n\n generated post \n {draft} \n ")
     return {"draft" : draft}
 
@@ -200,36 +197,40 @@ graph.add_conditional_edges(
 app = graph.compile()
 
 
-print("=" * 55)
-print("Welcome to the LinkedIn Post Generator")
-print("=" * 55)
-print("\nThis tool will draft a LinkedIn post for you, review it")
-print("itself, and iterate until it's publish-ready.")
 
-print("=" * 55)
+# if __name__ == "__main__":
 
-topic = input("\nWhat topic do you want a LinkedIn post about?\n> ").strip()
+#     print("=" * 55)
+#     print("Welcome to the LinkedIn Post Generator")
+#     print("=" * 55)
 
-if not topic:
-    print("\nNo topic given. Exiting.")
-else:
-    print("\nStarting generation...\n")
+#     print("\nThis tool will draft a LinkedIn post for you, review it")
+#     print("itself, and iterate until it's publish-ready.")
 
-    initial_state = {
-        "topic": topic,
-        "messages": [],
-        "draft": "",
-        "review_feedback": "",
-        "is_approved": False,
-        "attempt": 0,
-    }
+#     print("=" * 55)
 
-    final_state = app.invoke(initial_state)
+#     topic = input("\nWhat topic do you want a LinkedIn post about?\n> ").strip()
 
-    print("\n" + "=" * 55)
-    print("FINAL LINKEDIN POST")
-    print("=" * 55)
-    print(final_state["draft"])
-    print("=" * 55)
-    print(f"Total attempts: {final_state['attempt']}")
-    print(f"Approved: {final_state['is_approved']}")
+#     if not topic:
+#         print("\nNo topic given. Exiting.")
+#     else:
+#         print("\nStarting generation...\n")
+
+#         initial_state = {
+#             "topic": topic,
+#             "messages": [],
+#             "draft": "",
+#             "review_feedback": "",
+#             "is_approved": False,
+#             "attempt": 0,
+#         }
+
+#         final_state = app.invoke(initial_state)
+
+#         print("\n" + "=" * 55)
+#         print("FINAL LINKEDIN POST")
+#         print("=" * 55)
+#         print(final_state["draft"])
+#         print("=" * 55)
+#         print(f"Total attempts: {final_state['attempt']}")
+#         print(f"Approved: {final_state['is_approved']}")
