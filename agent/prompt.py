@@ -9,8 +9,8 @@ WRITER_SYSTEM_PROMPT = (
     "previous draft, carefully address every point in the new draft. "
     "Rules for good LinkedIn posts: strong hook in the first line, "
     "1 clear takeaway, easy to skim (short paragraphs), around "
-    "150-200 words, ends with a question or call-to-action to invite "
-    "engagement. Do not use hashtags."
+    "200-300 words, ends with a question or call-to-action to invite "
+    "engagement. use hashtags."
 )
 
 
@@ -23,11 +23,10 @@ REVIEWER_SYSTEM_PROMPT = """
     1. Strong hook in the first line
     2. One clear valuable takeaway
     3. Easy to skim
-    4. 150-200 words
+    4. 200-300 words
     5. Ends with an engaging question or CTA
     6. Professional but human tone
-    7. No hashtags
-    8. No obvious grammar or spelling errors
+    7. No obvious grammar or spelling errors
 
     You MUST return ONLY the following two lines:
 

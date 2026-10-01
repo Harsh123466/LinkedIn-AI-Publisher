@@ -17,21 +17,26 @@ load_dotenv()
 # llms
 
 # for write
-# writer_llm = ChatGoogleGenerativeAI(
-#     model="gemini-3-flash-preview",
-#     temperature=0.7
-# )
-
-writer_llm = ChatGroq(
-    model="qwen/qwen3.8-27b",
+writer_llm = ChatGoogleGenerativeAI(
+    model="gemini-3-flash-preview",
     temperature=0.7
 )
+
+# writer_llm = ChatGroq(
+#     model="qwen/qwen3.8-27b",
+#     temperature=0.7
+# )
 
 writer_llm_with_tools = writer_llm.bind_tools(tool)
 
 # for reviewer
-reviewer_llm = ChatGroq(
-    model="qwen/qwen3.8-27b",
+# reviewer_llm = ChatGroq(
+#     model="qwen/qwen3.8-27b",
+#     temperature=0.2
+# )
+
+reviewer_llm = ChatGoogleGenerativeAI(
+    model="gemini-3-flash-preview",
     temperature=0.2
 )
 
@@ -108,41 +113,58 @@ tool_node = ToolNode(tool)
 def extract_draft_node(state : State) -> dict:
     """After the writer finishes tool calls, pulls the final text out as the draft."""
     last_message = state['messages'][-1]
-    draft = last_message.content
+    draft = last_message.content[0]["text"]
     print(f"\n\n generated post \n {draft} \n ")
     return {"draft" : draft}
 
 
-
-def reviewer_node(state : State) -> dict:
+# this is for GEMINI LLM
+def reviewer_node(state: State) -> dict:
     """Reviews the draft and decides: approve or reject with feedback."""
 
-    draft = state['draft']
+    draft = state["draft"]
 
     prompt = (
-        f"review this LinkedIn post draft : \n"
+        f"Review this LinkedIn post draft:\n"
         f"{draft}\n"
-        f"give your reviews"
+        f"Give your review."
     )
 
     start = time.time()
 
     response = reviewer_llm.invoke(
-        [("system",REVIEWER_SYSTEM_PROMPT), ("human",prompt)]
+        [
+            ("system", REVIEWER_SYSTEM_PROMPT),
+            ("human", prompt)
+        ]
     )
 
-    print(f"Writer took {time.time() - start:.2f} seconds")
+    print(f"Reviewer took {time.time() - start:.2f} seconds")
 
-    review_text = response.content.strip()
+    # Gemini can return content as a list
+    if isinstance(response.content, list):
+        review_text = ""
+
+        for item in response.content:
+            if isinstance(item, dict):
+                if item.get("type") == "text":
+                    review_text += item.get("text", "")
+    else:
+        review_text = response.content
+
+    review_text = review_text.strip()
 
     is_approved = "APPROVED" in review_text.upper().split("FEEDBACK")[0]
 
-    if "FEEDBACK:" in review_text:
+    if "FEEDBACK:" in review_text.upper():
+
         feedback = review_text.split("FEEDBACK:", 1)[1].strip()
+
     else:
         feedback = review_text
 
     verdict = "APPROVED" if is_approved else "REJECTED"
+
     print(f"[Verdict: {verdict}]")
     print(f"[Feedback: {feedback}]")
 
@@ -150,6 +172,46 @@ def reviewer_node(state : State) -> dict:
         "review_feedback": feedback,
         "is_approved": is_approved,
     }
+
+
+
+# this is for GROQ LLM
+# def reviewer_node(state : State) -> dict:
+#     """Reviews the draft and decides: approve or reject with feedback."""
+
+#     draft = state['draft']
+
+#     prompt = (
+#         f"review this LinkedIn post draft : \n"
+#         f"{draft}\n"
+#         f"give your reviews"
+#     )
+
+#     start = time.time()
+
+#     response = reviewer_llm.invoke(
+#         [("system",REVIEWER_SYSTEM_PROMPT), ("human",prompt)]
+#     )
+
+#     print(f"Reviewer took {time.time() - start:.2f} seconds")
+
+#     review_text = response.content.strip()
+
+#     is_approved = "APPROVED" in review_text.upper().split("FEEDBACK")[0]
+
+#     if "FEEDBACK:" in review_text:
+#         feedback = review_text.split("FEEDBACK:", 1)[1].strip()
+#     else:
+#         feedback = review_text
+
+#     verdict = "APPROVED" if is_approved else "REJECTED"
+#     print(f"[Verdict: {verdict}]")
+#     print(f"[Feedback: {feedback}]")
+
+#     return {
+#         "review_feedback": feedback,
+#         "is_approved": is_approved,
+#     }
 
 
 # router func for iterations
